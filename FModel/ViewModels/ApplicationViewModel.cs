@@ -189,7 +189,10 @@ public class ApplicationViewModel : ViewModel
             CUE4Parse.LoadVfs(aes);
             AesManager.SetAesKeys();
         });
-        RaisePropertyChanged(nameof(GameDisplayName));
+        if (!isLaunch)
+        {
+            RaisePropertyChanged(nameof(GameDisplayName));
+        }
     }
 
     public static async Task InitVgmStream()
