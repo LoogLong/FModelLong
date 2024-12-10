@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -373,7 +373,9 @@ public abstract class UModel : IRenderableModel
     public bool Save(out string label, out string savedFilePath)
     {
         var toSave = new Exporter(_export, UserSettings.Default.ExportOptions);
-        return toSave.TryWriteToDir(new DirectoryInfo(UserSettings.Default.ModelDirectory), out label, out savedFilePath);
+        List<UObject> ObjectQueue = new List<UObject>();
+
+        return toSave.TryWriteToDir(new DirectoryInfo(UserSettings.Default.ModelDirectory), ObjectQueue, out label, out savedFilePath);
     }
 
     public virtual void Dispose()

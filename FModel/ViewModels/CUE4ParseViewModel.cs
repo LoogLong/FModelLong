@@ -1005,7 +1005,9 @@ public class CUE4ParseViewModel : ViewModel
     {
         var toSave = new Exporter(export, UserSettings.Default.ExportOptions);
         var toSaveDirectory = new DirectoryInfo(UserSettings.Default.ModelDirectory);
-        if (toSave.TryWriteToDir(toSaveDirectory, out var label, out var savedFilePath))
+        List<UObject> ObjectQueue = new List<UObject>();
+
+        if (toSave.TryWriteToDir(toSaveDirectory, ObjectQueue, out var label, out var savedFilePath))
         {
             Log.Information("Successfully saved {FilePath}", savedFilePath);
             if (updateUi)

@@ -134,7 +134,8 @@ public class Animation : IDisposable
             if (ImGui.MenuItem("Save"))
             {
                 s.WindowShouldFreeze(true);
-                saver.Value = new Exporter(_export, UserSettings.Default.ExportOptions).TryWriteToDir(new DirectoryInfo(UserSettings.Default.ModelDirectory), out saver.Label, out saver.Path);
+                List<UObject> ObjectQueue = new List<UObject>();
+                saver.Value = new Exporter(_export, UserSettings.Default.ExportOptions).TryWriteToDir(new DirectoryInfo(UserSettings.Default.ModelDirectory), ObjectQueue, out saver.Label, out saver.Path);
                 s.WindowShouldFreeze(false);
             }
             ImGui.Separator();
