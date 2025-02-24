@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using AdonisUI.Controls;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using AutoUpdaterDotNET;
+using CUE4Parse.Utils;
 using FModel.Extensions;
 using FModel.Framework;
 using FModel.Services;
@@ -135,6 +136,8 @@ public class FModelApiEndpoint : AbstractApiProvider
 
     private void CheckForUpdateEvent(UpdateInfoEventArgs args)
     {
+        return;
+
         if (args is { CurrentVersion: { } })
         {
             UserSettings.Default.LastUpdateCheck = DateTime.Now;

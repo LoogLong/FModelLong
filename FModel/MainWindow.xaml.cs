@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AdonisUI.Controls;
-using FModel.Extensions;
+using CUE4Parse.FileProvider.Objects;
 using FModel.Services;
 using FModel.Settings;
 using FModel.ViewModels;
@@ -64,6 +64,7 @@ public partial class MainWindow
         await ApplicationViewModel.InitOodle();
         await ApplicationViewModel.InitZlib();
         await _applicationView.CUE4Parse.Initialize();
+        await _applicationView.CUE4Parse.InitMappings();
         await _applicationView.AesManager.InitAes();
         await _applicationView.UpdateProvider(true);
 #if !DEBUG
@@ -72,7 +73,6 @@ public partial class MainWindow
         await Task.WhenAll(
             _applicationView.CUE4Parse.VerifyConsoleVariables(),
             _applicationView.CUE4Parse.VerifyOnDemandArchives(),
-            _applicationView.CUE4Parse.InitMappings(),
             ApplicationViewModel.InitVgmStream(),
             ApplicationViewModel.InitImGuiSettings(newOrUpdated),
             Task.Run(() =>
@@ -85,10 +85,10 @@ public partial class MainWindow
 #if DEBUG
         // await _threadWorkerView.Begin(cancellationToken =>
         //     _applicationView.CUE4Parse.Extract(cancellationToken,
-        //         "FortniteGame/Content/Athena/Apollo/Maps/UI/Apollo_Terrain_Minimap.uasset"));
+        //         _applicationView.CUE4Parse.Provider["Marvel/Content/Marvel/Characters/1050/1050300/Meshes/SK_1050_1050300_Lobby.uasset"]));
         // await _threadWorkerView.Begin(cancellationToken =>
         //     _applicationView.CUE4Parse.Extract(cancellationToken,
-        //         "FortniteGame/Content/Environments/Helios/Props/GlacierHotel/GlacierHotel_Globe_A/Meshes/SM_GlacierHotel_Globe_A.uasset"));
+        //         "RED/Content/Chara/ABA/Costume01/Animation/Charaselect/body/stand_body01.uasset"));
 #endif
     }
 
@@ -163,7 +163,7 @@ public partial class MainWindow
     {
         if (sender is not ListBox listBox) return;
 
-        var selectedItems = listBox.SelectedItems.Cast<AssetItem>().ToList();
+        var selectedItems = listBox.SelectedItems.Cast<GameFile>().ToList();
         await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.ExtractSelected(cancellationToken, selectedItems); });
     }
 
@@ -208,7 +208,7 @@ public partial class MainWindow
             await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.TextureFolder(cancellationToken, folder); });
             FLogger.Append(ELog.Information, () =>
             {
-                FLogger.Text("Successfully saved ", Constants.WHITE);
+                FLogger.Text("Successfully saved textures from ", Constants.WHITE);
                 FLogger.Link(folder.PathAtThisPoint, UserSettings.Default.TextureDirectory, true);
             });
         }
@@ -219,6 +219,11 @@ public partial class MainWindow
         if (AssetsFolderName.SelectedItem is TreeItem folder)
         {
             await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.ModelFolder(cancellationToken, folder); });
+            FLogger.Append(ELog.Information, () =>
+            {
+                FLogger.Text("Successfully saved models from ", Constants.WHITE);
+                FLogger.Link(folder.PathAtThisPoint, UserSettings.Default.ModelDirectory, true);
+            });
         }
     }
 
@@ -227,6 +232,11 @@ public partial class MainWindow
         if (AssetsFolderName.SelectedItem is TreeItem folder)
         {
             await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.AnimationFolder(cancellationToken, folder); });
+            FLogger.Append(ELog.Information, () =>
+            {
+                FLogger.Text("Successfully saved animations from ", Constants.WHITE);
+                FLogger.Link(folder.PathAtThisPoint, UserSettings.Default.ModelDirectory, true);
+            });
         }
     }
 
@@ -257,7 +267,7 @@ public partial class MainWindow
             return;
 
         var filters = textBox.Text.Trim().Split(' ');
-        folder.AssetsList.AssetsView.Filter = o => { return o is AssetItem assetItem && filters.All(x => assetItem.FullPath.SubstringAfterLast('/').Contains(x, StringComparison.OrdinalIgnoreCase)); };
+        folder.AssetsList.AssetsView.Filter = o => { return o is GameFile entry && filters.All(x => entry.Name.Contains(x, StringComparison.OrdinalIgnoreCase)); };
     }
 
     private void OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -274,7 +284,7 @@ public partial class MainWindow
         switch (e.Key)
         {
             case Key.Enter:
-                var selectedItems = listBox.SelectedItems.Cast<AssetItem>().ToList();
+                var selectedItems = listBox.SelectedItems.Cast<GameFile>().ToList();
                 await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.ExtractSelected(cancellationToken, selectedItems); });
                 break;
         }

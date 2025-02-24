@@ -8,7 +8,6 @@ using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Highlighting;
 using Serilog;
 using SkiaSharp;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -16,6 +15,8 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using CUE4Parse.UE4.Assets.Exports.Texture;
 using CUE4Parse_Conversion.Textures;
+using CUE4Parse.FileProvider.Objects;
+using CUE4Parse.Utils;
 
 namespace FModel.ViewModels;
 
@@ -92,21 +93,27 @@ public class TabItem : ViewModel
 {
     public string ParentExportType { get; private set; }
 
-    private string _header;
-    public string Header
+    private GameFile _entry;
+    public GameFile Entry
     {
-        get => _header;
-        set => SetProperty(ref _header, value);
+        get => _entry;
+        set
+        {
+            SetProperty(ref _entry, value);
+            RaisePropertyChanged(nameof(Header));
+        }
     }
 
-    private string _directory;
-    public string Directory
+    private string _titleExtra;
+    public string TitleExtra
     {
-        get => _directory;
-        set => SetProperty(ref _directory, value);
+        get => _titleExtra;
+        set
+        {
+            SetProperty(ref _titleExtra, value);
+            RaisePropertyChanged(nameof(Header));
+        }
     }
-
-    public string FullPath => this.Directory + "/" + this.Header.SubstringBeforeLast(" (");
 
     private bool _hasSearchOpen;
     public bool HasSearchOpen
@@ -202,6 +209,8 @@ public class TabItem : ViewModel
         }
     }
 
+    public string Header => $"{Entry.Name}{(string.IsNullOrEmpty(TitleExtra) ? "" : $" ({TitleExtra})")}";
+
     public bool HasImage => SelectedImage != null;
     public bool HasMultipleImages => _images.Count > 1;
     public string Page => $"{_images.IndexOf(_selectedImage) + 1} / {_images.Count}";
@@ -217,18 +226,17 @@ public class TabItem : ViewModel
     private GoToCommand _goToCommand;
     public GoToCommand GoToCommand => _goToCommand ??= new GoToCommand(null);
 
-    public TabItem(string header, string directory, string parentExportType)
+    public TabItem(GameFile entry, string parentExportType)
     {
-        Header = header;
-        Directory = directory;
+        Entry = entry;
         ParentExportType = parentExportType;
         _images = new ObservableCollection<TabImage>();
     }
 
-    public void SoftReset(string header, string directory)
+    public void SoftReset(GameFile entry)
     {
-        Header = header;
-        Directory = directory;
+        Entry = entry;
+        TitleExtra = string.Empty;
         ParentExportType = string.Empty;
         ScrollTrigger = null;
         Application.Current.Dispatcher.Invoke(() =>
@@ -316,9 +324,9 @@ public class TabItem : ViewModel
 
         var fileName = image.ExportName + ext;
         var path = Path.Combine(UserSettings.Default.TextureDirectory,
-            UserSettings.Default.KeepDirectoryStructure ? Directory : "", fileName!).Replace('\\', '/');
+            UserSettings.Default.KeepDirectoryStructure ? Entry.Directory : "", fileName!).Replace('\\', '/');
 
-        System.IO.Directory.CreateDirectory(path.SubstringBeforeLast('/'));
+        Directory.CreateDirectory(path.SubstringBeforeLast('/'));
 
         SaveImage(image, path, fileName, updateUi);
     }
@@ -337,11 +345,11 @@ public class TabItem : ViewModel
 
     public void SaveProperty(bool updateUi)
     {
-        var fileName = Path.ChangeExtension(Header, ".json");
+        var fileName = Path.ChangeExtension(Entry.Name, ".json");
         var directory = Path.Combine(UserSettings.Default.PropertiesDirectory,
-            UserSettings.Default.KeepDirectoryStructure ? Directory : "", fileName).Replace('\\', '/');
+            UserSettings.Default.KeepDirectoryStructure ? Entry.Directory : "", fileName).Replace('\\', '/');
 
-        System.IO.Directory.CreateDirectory(directory.SubstringBeforeLast('/'));
+        Directory.CreateDirectory(directory.SubstringBeforeLast('/'));
 
         Application.Current.Dispatcher.Invoke(() => File.WriteAllText(directory, Document.Text));
         SaveCheck(directory, fileName, updateUi);
@@ -390,28 +398,25 @@ public class TabControlViewModel : ViewModel
 
     public TabControlViewModel()
     {
-        _tabItems = new ObservableCollection<TabItem>(EnumerateTabs());
+        _tabItems = [];
         TabsItems = new ReadOnlyObservableCollection<TabItem>(_tabItems);
-        SelectedTab = TabsItems.FirstOrDefault();
+        AddTab();
     }
 
-    public void AddTab(string header = null, string directory = null, string parentExportType = null)
+    public void AddTab() => AddTab("New Tab");
+    public void AddTab(string title) => AddTab(new FakeGameFile(title));
+    public void AddTab(GameFile entry, string parentExportType = null)
     {
-        if (!CanAddTabs) return;
-
-        var h = header ?? "New Tab";
-        var d = directory ?? string.Empty;
-        var p = parentExportType ?? string.Empty;
-        if (SelectedTab is { Header : "New Tab" })
+        if (SelectedTab?.Header == "New Tab")
         {
-            SelectedTab.Header = h;
-            SelectedTab.Directory = d;
+            SelectedTab.Entry = entry;
             return;
         }
 
+        if (!CanAddTabs) return;
         Application.Current.Dispatcher.Invoke(() =>
         {
-            _tabItems.Add(new TabItem(h, d, p));
+            _tabItems.Add(new TabItem(entry, parentExportType ?? string.Empty));
             SelectedTab = _tabItems.Last();
         });
     }
@@ -469,10 +474,5 @@ public class TabControlViewModel : ViewModel
             SelectedTab = null;
             _tabItems.Clear();
         });
-    }
-
-    private static IEnumerable<TabItem> EnumerateTabs()
-    {
-        yield return new TabItem("New Tab", string.Empty, string.Empty);
     }
 }

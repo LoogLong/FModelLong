@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FModel.Extensions;
+using CUE4Parse.Utils;
 using FModel.Framework;
 using FModel.ViewModels.ApiEndpoints.Models;
 using Newtonsoft.Json.Linq;
@@ -66,7 +66,7 @@ public class DynamicApiEndpoint : AbstractApiProvider
     {
         var request = new FRestRequest(url)
         {
-            OnBeforeDeserialization = resp => { resp.ContentType = "application/json; charset=utf-8"; }
+            Interceptors = [_interceptor]
         };
         var response = await _client.ExecuteAsync(request, token).ConfigureAwait(false);
         Log.Information("[{Method}] [{Status}({StatusCode})] '{Resource}'", request.Method, response.StatusDescription, (int) response.StatusCode, response.ResponseUri?.OriginalString);
