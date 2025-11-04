@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FModel": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
